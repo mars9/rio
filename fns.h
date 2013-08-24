@@ -96,6 +96,7 @@ void	dump_clients();
 void shuffle(int);
 
 /* grab.c */
+XftFont*	initfont(Display*, ScreenInfo*, char*);
 int 	menuhit();
 Client	*selectwin();
 int 	sweep();

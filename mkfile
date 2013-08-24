@@ -1,5 +1,5 @@
 <$PLAN9/src/mkhdr
-<|sh ../devdraw/mkwsysrules.sh	# for X11
+<|sh mkwsysrules.sh	# for X11
 
 RIOFILES=\
 	client.$O\
@@ -13,7 +13,8 @@ RIOFILES=\
 	manage.$O\
 	menu.$O\
 
-CFLAGS=$CFLAGS -DDEBUG
+CFLAGS=$CFLAGS
+LDFLAGS=$LDFLAGS
 HFILES=dat.h fns.h
 
 TARG=rio xshove
@@ -23,7 +24,7 @@ TARG=rio xshove
 # Bug in mk? "$L64 -lXext" gobbles the space, so 
 # add trailing slash.
 L64=`[ -d $X11/lib64 ] && echo 64; echo`
-LDFLAGS=-L$X11/lib$L64/ -lXext -lX11
+LDFLAGS=-L$X11/lib$L64/ $LDFLAGS -lXext -lX11
 
 <|sh mkriorules.sh
 

@@ -24,11 +24,12 @@ char	*version[] =
 Display 		*dpy;
 ScreenInfo	*screens;
 int 			initting;
-XFontStruct 	*font;
+XftFont		*xftfont;
 int 			nostalgia;
 char			**myargv;
 char			*termprog;
 char			*shell;
+char			*fname;
 Bool			shape;
 int 			_border = 4;
 int 			_corner = 25;
@@ -56,14 +57,9 @@ Atom		_rio_hold_mode;
 Atom		wm_state_fullscreen;
 Atom		wm_state;
 
-char	*fontlist[] = {
-	"lucm.latin1.9",
-	"blit",
-	"*-lucidatypewriter-bold-*-14-*-75-*",
-	"*-lucidatypewriter-medium-*-12-*-75-*",
-	"9x15bold",
-	"fixed",
-	"*",
+char	*xftfontlist[] = {
+	"sans-serif:pixelsize=14:bold",
+	"dejavu:pixelsize=14:bold",
 	0
 };
 
@@ -78,7 +74,6 @@ int
 main(int argc, char *argv[])
 {
 	int i, background, do_exit, do_restart;
-	char *fname;
 	int shape_event;
 #ifdef SHAPE
 	int dummy;
@@ -89,7 +84,6 @@ main(int argc, char *argv[])
 
 	do_exit = do_restart = 0;
 	background = 0;
-	font = 0;
 	fname = 0;
 	for(i = 1; i < argc; i++)
 		if(strcmp(argv[i], "-nostalgia") == 0)
@@ -185,23 +179,6 @@ main(int argc, char *argv[])
 	wm_state = XInternAtom(dpy, "_NET_WM_STATE", False);
 	wm_state_fullscreen = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 
-	if(fname != 0)
-		if((font = XLoadQueryFont(dpy, fname)) == 0)
-			fprintf(stderr, "rio: warning: can't load font %s\n", fname);
-
-	if(font == 0){
-		i = 0;
-		for(;;){
-			fname = fontlist[i++];
-			if(fname == 0){
-				fprintf(stderr, "rio: warning: can't find a font\n");
-				break;
-			}
-			font = XLoadQueryFont(dpy, fname);
-			if(font != 0)
-				break;
-		}
-	}
 	if(nostalgia){
 		_border--;
 		_inset--;
@@ -324,10 +301,7 @@ initscreen(ScreenInfo *s, int i, int background)
 	gv.subwindow_mode = IncludeInferiors;
 	gmask = GCForeground | GCBackground | GCFunction | GCLineWidth
 		| GCSubwindowMode;
-	if(font != 0){
-		gv.font = font->fid;
-		gmask |= GCFont;
-	}
+
 	s->gc = XCreateGC(dpy, s->root, gmask, &gv);
 
 	gv.function = GXcopy;
@@ -341,6 +315,23 @@ initscreen(ScreenInfo *s, int i, int background)
 
 	initcurs(s);
 
+	if(fname != 0)
+		if((xftfont = initfont(dpy, s, fname)) == NULL)
+			fprintf(stderr, "rio: warning: can't load font %s\n", fname);
+	if(xftfont == NULL){
+		i = 0;
+		for(;;){
+			fname = xftfontlist[i++];
+			if(fname == 0){
+				fprintf(stderr, "rio: warning: can't find a font\n");
+				break;
+			}
+			xftfont = initfont(dpy, s, fname);
+			if(xftfont != NULL)
+				break;
+		}
+	}
+
 	attr.cursor = s->arrow;
 	attr.event_mask = SubstructureRedirectMask
 		| SubstructureNotifyMask | ColormapChangeMask
@@ -353,8 +344,14 @@ initscreen(ScreenInfo *s, int i, int background)
 	if(background){
 		XSetWindowBackgroundPixmap(dpy, s->root, s->root_pixmap);
 		XClearWindow(dpy, s->root);
-	} else
-		system("xsetroot -solid grey30");
+	} else {
+		XColor color;
+		Colormap cmap = DefaultColormap(dpy, s->num);
+		XAllocNamedColor(dpy, cmap, "grey30", &color, &color);
+		XSetWindowBackground(dpy, s->root, color.pixel);
+		XClearWindow(dpy, s->root);
+		XSetCloseDownMode(dpy, RetainPermanent);
+	}
 
 	attrs.border_pixel =  colorpixel(dpy, s, s->depth, 0x88CC88, s->black);
 	attrs.background_pixel =  colorpixel(dpy, s, s->depth, 0xE9FFE9, s->white);

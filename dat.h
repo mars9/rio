@@ -1,4 +1,5 @@
 /* Copyright (c) 1994-1996 David Hogan, see README for licence details */
+#include <X11/Xft/Xft.h>
 
 #define BORDER		_border
 #define CORNER		_corner
@@ -135,7 +136,7 @@ extern Display		*dpy;
 extern ScreenInfo	*screens;
 extern int			num_screens;
 extern int			initting;
-extern XFontStruct	*font;
+extern XftFont		*xftfont;
 extern int			nostalgia;
 extern char		**myargv;
 extern Bool 		shape;

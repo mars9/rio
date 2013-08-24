@@ -46,15 +46,41 @@ ungrab(XButtonEvent *e)
 	curtime = e->time;
 }
 
+XftColor xftcolor;
+XftDraw *xftdraw;
+
+XftFont*
+initfont(Display *dpy, ScreenInfo *s, char *fname)
+{
+	XRenderColor black = { 0, 0, 0, 0xffff };
+	XftColorAllocValue(dpy, s->vis, s->def_cmap, &black, &xftcolor);
+	return XftFontOpenName(dpy, s->num, fname);;
+}
+
+static int
+xftwidth(XftFont *xftfont, char *text, int len)
+{
+	XGlyphInfo extents;
+
+	XftTextExtentsUtf8(dpy, xftfont, (const FcChar8*)text,
+	    len, &extents);
+
+	return extents.width;
+}
+
 static void
 drawstring(Display *dpy, ScreenInfo *s, Menu *m, int wide, int high, int i, int selected)
 {
 	int tx, ty;
 
-	tx = (wide - XTextWidth(font, m->item[i], strlen(m->item[i])))/2;
-	ty = i*high + font->ascent + 1;
-	XFillRectangle(dpy, s->menuwin, selected ? s->gcmenubgs : s->gcmenubg, 0, i*high, wide, high);
-	XDrawString(dpy, s->menuwin, selected ? s->gcmenufgs : s->gcmenufg, tx, ty, m->item[i], strlen(m->item[i]));
+	tx = (wide - xftwidth(xftfont, m->item[i], strlen(m->item[i])))/2;
+	ty = i*high + xftfont->ascent + 1;
+
+	xftdraw = XftDrawCreate(dpy, s->menuwin, s->vis, s->def_cmap);
+	XFillRectangle(dpy, s->menuwin, selected ? s->gcmenubgs : s->gcmenubg, 0,
+		i*high, wide, high);
+	XftDrawStringUtf8(xftdraw, &xftcolor, xftfont, tx, ty, (FcChar8*)m->item[i],
+		strlen(m->item[i]));
 }
 
 int
@@ -65,15 +91,13 @@ menuhit(XButtonEvent *e, Menu *m)
 	int x, y, dx, dy, xmax, ymax;
 	ScreenInfo *s;
 
-	if(font == 0)
-		return -1;
 	s = getscreen(e->root);
 	if(s == 0 || e->window == s->menuwin)	   /* ugly event mangling */
 		return -1;
 
 	dx = 0;
 	for(n = 0; m->item[n]; n++){
-		wide = XTextWidth(font, m->item[n], strlen(m->item[n])) + 4;
+		wide = xftwidth(xftfont, m->item[n], strlen(m->item[n])) + 4;
 		if(wide > dx)
 			dx = wide;
 	}
@@ -82,7 +106,7 @@ menuhit(XButtonEvent *e, Menu *m)
 	if(cur >= n)
 		cur = n - 1;
 
-	high = font->ascent + font->descent + 1;
+	high = xftfont->ascent + xftfont->descent + 1;
 	dy = n*high;
 	x = e->x - wide/2;
 	y = e->y - cur*high - high/2;
