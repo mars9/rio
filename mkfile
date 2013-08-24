@@ -17,7 +17,7 @@ CFLAGS=$CFLAGS
 LDFLAGS=$LDFLAGS
 HFILES=dat.h fns.h
 
-TARG=rio xshove
+TARG=rio xshove clock
 
 # need to add lib64 when it exists (on x86-64), but
 # Darwin complains about the nonexistant directory
@@ -41,3 +41,6 @@ error.$O: showevent/ShowEvent.c
 
 $O.xshove: xshove.$O
 	$LD -o $O.xshove xshove.$O -lX11
+
+$O.clock: clock.$O
+	$LD -o $O.clock clock.$O -lX11
